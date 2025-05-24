@@ -1,5 +1,3 @@
-import os
-import google.generativeai as genai
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, render_template
 from agno.agent import Agent
@@ -8,9 +6,6 @@ import asyncio
 from flask_cors import CORS
 load_dotenv()
 
-genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
-if not os.environ.get("GOOGLE_API_KEY"):
-    raise ValueError("GOOGLE_API_KEY environment variable not set. Please set it in your .env file.")
 
 from agents import MathAgent, PhysicsAgent
 
