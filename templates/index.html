@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Agent Tutor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #e0f2f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 600px;
+        }
+        h1 {
+            background-color: #007bff;
+            color: white;
+            padding: 20px;
+            margin: 0;
+            font-size: 1.8em;
+            text-align: center;
+            border-bottom: 1px solid #0056b3;
+        }
+        .chat-box {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #f7fbfc;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .message {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .message.user {
+            justify-content: flex-end;
+        }
+        .message.tutor {
+            justify-content: flex-start;
+        }
+        .message .content {
+            padding: 12px 18px;
+            border-radius: 20px;
+            max-width: 70%;
+            word-wrap: break-word;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+            line-height: 1.4;
+        }
+        .user .content {
+            background-color: #dcf8c6;
+            color: #333;
+        }
+        .tutor .content {
+            background-color: #e0f7fa;
+            color: #333;
+        }
+        .input-area {
+            display: flex;
+            padding: 20px;
+            border-top: 1px solid #eee;
+            background-color: #fff;
+            gap: 10px;
+        }
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 12px 15px;
+            border: 1px solid #ccc;
+            border-radius: 25px;
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        input[type="text"]:focus {
+            border-color: #007bff;
+        }
+        button {
+            padding: 12px 25px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin-left: 10px;
+            align-self: center;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Multi-Agent Tutor</h1>
+        <div id="chat-box" class="chat-box"></div>
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Ask your question...">
+            <button onclick="sendMessage()">Send</button>
+            <div id="loader" class="loader"></div>
+        </div>
+    </div>
+
+    <script>
+        const userInput = document.getElementById('user-input');
+        const chatBox = document.getElementById('chat-box');
+        const loader = document.getElementById('loader');
+
+        function appendMessage(sender, message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+            messageDiv.innerHTML = `<span class="content">${message}</span>`;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const query = userInput.value.trim();
+
+            if (query === '') {
+                return;
+            }
+
+            appendMessage('user', query);
+            userInput.value = '';
+
+            loader.style.display = 'inline-block';
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query }),
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                }
+
+                const data = await response.json();
+
+                if (data.response) {
+                    appendMessage('tutor', data.response);
+                } else if (data.error) {
+                    appendMessage('tutor', `Error from tutor: ${data.error}`);
+                } else {
+                    appendMessage('tutor', 'An unexpected response format was received.');
+                }
+
+            } catch (error) {
+                console.error('Fetch error:', error);
+                appendMessage('tutor', `Connection Error: Could not reach the tutor. Please check your network or try again later. (${error.message || error})`);
+            } finally {
+                loader.style.display = 'none'; // Hide loader
+            }
+        }
+
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        window.onload = () => {
+            appendMessage('tutor', 'Hello! I am your multi-agent tutor. Ask me anything about Math or Physics!');
+        };
+    </script>
+</body>
+</html>
